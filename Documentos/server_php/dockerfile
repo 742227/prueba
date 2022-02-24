@@ -1,0 +1,29 @@
+FROM composer as backend
+
+WORKDIR /app
+
+COPY ${PWD}/app/composer.json /app/
+RUN composer install \
+	--ignore-platform-reqs \
+	--no-ansi \
+	--no-autoloader \
+	--no-dev \
+	--no-interaction \
+	--no-scripts
+
+COPY ${PWD}/app /app/
+
+RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
+
+FROM php:7.2-apache
+
+EXPOSE 80
+
+ENV DISPLAY_ERRORS=${DISPLAY_ERRORS}
+RUN pecl install xdebug-2.6.0; \
+	docker-php-ext-enable xdebug; \
+	docker-php-ext-install pdo pdo_mysql;
+
+WORKDIR /app
+COPY --from=backend ${PWD}/app /var/www/html/
+COPY ${PWD}/app/php.ini /usr/local/etc/php/php.ini
